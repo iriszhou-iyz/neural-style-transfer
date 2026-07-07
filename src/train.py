@@ -3,7 +3,7 @@ import torch.optim as optim
 
 from model import VGGFeatures
 from losses import ContentLoss, StyleLoss
-from utils import load_image
+from utils import load_image, save_output
 
 # gpu if available, else cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,47 +14,57 @@ style_img = load_image("images/style.jpg").to(device)
 # pretrained VGG19 network to extract image features - network weights frozen
 model = VGGFeatures().to(device).eval()
 
-content_layers = [21]  # conv4_2 approx
-style_layers = [0, 5, 10, 19, 28]
+# approx conv4_2 - high-level semantic content
+CONTENT_LAYER = 21
+STYLE_LAYERS = [0, 5, 10, 19, 28]
 
+# compute feature maps, never change during optimization
+content_features = model(content_img)
+style_features = model(style_img)
+
+# reusable loss modules
+# StyleLoss: stores target Gram matrix from style image
+# ContentLoss: stores target feature map from content image
+content_loss_fn = ContentLoss(content_features[CONTENT_LAYER])
+style_loss_fns = [StyleLoss(style_features[layer]) for layer in STYLE_LAYERS]
+
+# tensor that will be updated in optimization, starts from content image
 generated = content_img.clone().requires_grad_(True)
 
+# updates pixels of the generated image
 optimizer = optim.Adam([generated], lr=0.03)
 
+# hyperparameters
 num_steps = 300
+# larger style weight -> more artistic image
 style_weight = 1e6
+# larger content weight -> more structure
 content_weight = 1
 
 for step in range(num_steps):
-
+    # compute vgg feature maps for generated image
     gen_features = model(generated)
-    content_features = model(content_img)
-    style_features = model(style_img)
 
-    content_loss = 0
+    content_loss = content_loss_fn(gen_features[CONTENT_LAYER])
+
+    # styleloss compares Gram matrices between generated and style feature maps
     style_loss = 0
-
-    # content loss
-    content_loss += torch.mean((gen_features[21] - content_features[21]) ** 2)
-
-    # style loss
-    for i in style_layers:
-        gm_gen = torch.mm(gen_features[i].view(gen_features[i].shape[1], -1),
-                          gen_features[i].view(gen_features[i].shape[1], -1).t())
-
-        gm_style = torch.mm(style_features[i].view(style_features[i].shape[1], -1),
-                            style_features[i].view(style_features[i].shape[1], -1).t())
-
-        style_loss += torch.mean((gm_gen - gm_style) ** 2)
+    for loss_fn, layer in zip(style_loss_fns, STYLE_LAYERS):
+        style_loss += loss_fn(gen_features[layer])
 
     total_loss = content_weight * content_loss + style_weight * style_loss
 
+    # backprop: compute loss gradients wrt generated image and update its pixels
     optimizer.zero_grad()
     total_loss.backward()
     optimizer.step()
 
     if step % 50 == 0:
-        print(f"Step {step}, Loss: {total_loss.item()}")
+        print(
+            f"Step {step:3d} | "
+            f"Content: {content_loss.item():.4f} | "
+            f"Style: {style_loss.item():.4f} | "
+            f"Total: {total_loss.item():.4f}"
+        )
 
-# save output
-torch.save(generated, "images/output/stylized.pt")
+save_output(generated, "images/output/stylized.png")
