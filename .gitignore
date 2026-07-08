@@ -1,0 +1,8 @@
+# venv
+nst-venv/
+
+# generated outputs
+output/*
+
+# OS files
+.DS_store
