@@ -16,6 +16,7 @@ model = VGGFeatures().to(device).eval()
 
 # approx conv4_2 - high-level semantic content
 CONTENT_LAYER = 21
+# conv layers of vgg
 STYLE_LAYERS = [0, 5, 10, 19, 28]
 
 # compute feature maps, never change during optimization
