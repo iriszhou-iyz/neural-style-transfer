@@ -1,9 +1,60 @@
+import argparse
+
 import torch
 import torch.optim as optim
 
 from model import VGGFeatures
-from losses import ContentLoss, StyleLoss
+from loss import ContentLoss, StyleLoss
 from utils import load_image, save_output
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Neural Style Transfer using VGG19")
+
+    parser.add_argument(
+        "--content",
+        type=str,
+        required=True,
+        help="Path to content image"
+    )
+
+    parser.add_argument(
+        "--style",
+        type=str,
+        required=True,
+        help="Path to style image"
+    )
+
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="images/output/stylized.png"
+    )
+
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=300
+    )
+
+    parser.add_argument(
+        "--style-weight",
+        type=float,
+        default=1e6
+    )
+
+    parser.add_argument(
+        "--content-weight",
+        type=float,
+        default=1
+    )
+
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.03
+    )
+
+    return parser.parse_args()
 
 # gpu if available, else cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
