@@ -59,7 +59,7 @@ def parse_args():
 # gpu if available, else cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-content_img = load_image("images/content.jpg").to(device)
+content_img = load_image("images/c1.jpg").to(device)
 style_img = load_image("images/style.jpg").to(device)
 
 # pretrained VGG19 network to extract image features - network weights frozen
@@ -119,4 +119,4 @@ for step in range(num_steps):
             f"Total: {total_loss.item():.4f}"
         )
 
-save_output(generated, "images/output/stylized.png")
+save_output(generated, "output/stylized1.png")

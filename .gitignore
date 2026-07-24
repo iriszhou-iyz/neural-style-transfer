@@ -1,6 +1,9 @@
 # venv
 nst-venv/
 
+# pycache
+__pycache__/
+
 # generated outputs
 output/*
 
